@@ -1,67 +1,68 @@
 AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+DIO – Template básico que cria um bucket S3 privado com bloqueio de acesso público ativado.
+
+
+
+Metadata:
+TemplateName: template-basic-s3
+Version: 1.0.0
 
 
 Parameters:
 BucketName:
 Type: String
-Description: Nome global e único do bucket S3 para website estático
+Description: Nome global e único do bucket S3
 MinLength: 3
 MaxLength: 63
 AllowedPattern: "[a-z0-9][a-z0-9\-]*[a-z0-9]"
+ConstraintDescription: "Use apenas letras minúsculas, números e hífens; não comece/termine com hífen."
 
 
-IndexDocument:
+EnableVersioning:
 Type: String
-Default: index.html
-Description: Documento inicial do website S3
+Default: "false"
+AllowedValues: ["true", "false"]
+Description: Ativa versionamento no bucket se "true".
 
 
-ErrorDocument:
-Type: String
-Default: error.html
-Description: Documento de erro do website S3
+Mappings:
+VersioningStatusMap:
+true:
+Status: Enabled
+false:
+Status: Suspended
 
 
 Resources:
-SiteBucket:
+S3Bucket:
 Type: AWS::S3::Bucket
 Properties:
 BucketName: !Ref BucketName
-WebsiteConfiguration:
-IndexDocument: !Ref IndexDocument
-ErrorDocument: !Ref ErrorDocument
 PublicAccessBlockConfiguration:
-BlockPublicAcls: false
-BlockPublicPolicy: false
-IgnorePublicAcls: false
-RestrictPublicBuckets: false
+BlockPublicAcls: true
+BlockPublicPolicy: true
+IgnorePublicAcls: true
+RestrictPublicBuckets: true
+VersioningConfiguration:
+Status: !FindInMap [VersioningStatusMap, !Ref EnableVersioning, Status]
 Tags:
 - Key: Project
 Value: dio-primeira-stack
-- Key: Purpose
-Value: static-website
-
-
-SiteBucketPolicy:
-Type: AWS::S3::BucketPolicy
-Properties:
-Bucket: !Ref SiteBucket
-PolicyDocument:
-Version: "2012-10-17"
-Statement:
-- Sid: AllowPublicRead
-Effect: Allow
-Principal: "*"
-Action: "s3:GetObject"
-Resource: !Sub "${SiteBucket.Arn}/*"
+- Key: ManagedBy
+Value: cloudformation
 
 
 Outputs:
-WebsiteURL:
-Description: URL do website estático hospedado no S3
-Value: !GetAtt SiteBucket.WebsiteURL
+BucketNameOut:
+Description: Nome do bucket criado
+Value: !Ref S3Bucket
+Export:
+Name: !Sub "${AWS::StackName}-BucketName"
 
 
-BucketDomainName:
-Description: Endpoint do bucket
-Value: !GetAtt SiteBucket.DomainName
+BucketArn:
+Description: ARN do bucket
+Value: !GetAtt S3Bucket.Arn
+Export:
+Name: !Sub "${AWS::StackName}-BucketArn"
